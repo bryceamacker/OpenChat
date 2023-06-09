@@ -4,6 +4,10 @@ import { PineconeStore } from 'langchain/vectorstores/pinecone';
 import { makeChain } from '@/utils/makechain';
 import { pinecone } from '@/utils/pinecone-client';
 import { PINECONE_INDEX_NAME, PINECONE_NAME_SPACE } from '@/config/pinecone';
+import { Milvus } from 'langchain/vectorstores/milvus';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import weaviate from "weaviate-ts-client";
+import { WeaviateStore } from "langchain/vectorstores/weaviate";
 
 export default async function handler(
     req: NextApiRequest,
@@ -26,18 +30,41 @@ export default async function handler(
   const sanitizedQuestion = question.trim().replaceAll('\n', ' ');
 
   try {
-    const index = pinecone.Index(PINECONE_INDEX_NAME);
+    // const index = pinecone.Index(PINECONE_INDEX_NAME);
 
     /* create vectorstore*/
-    const vectorStore = await PineconeStore.fromExistingIndex(
-        new OpenAIEmbeddings({}),
-        {
-          pineconeIndex: index,
-          textKey: 'text',
-          namespace: namespace, //namespace comes from your config folder
-        },
-    );
+    // const vectorStore = await PineconeStore.fromExistingIndex(
+    //     new OpenAIEmbeddings({}),
+    //     {
+    //       pineconeIndex: index,
+    //       textKey: 'text',
+    //       namespace: namespace, //namespace comes from your config folder
+    //     },
+    // );
+    const client = (weaviate as any).client({
+      scheme: process.env.WEAVIATE_SCHEME || "https",
+      host: process.env.WEAVIATE_HOST || "localhost",
+      // apiKey: new (weaviate as any).ApiKey(
+      //   process.env.WEAVIATE_API_KEY || "default"
+      // ),
+    });
+    const embeddings = new OpenAIEmbeddings({
+      azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
+      azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME,
+      azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_EMBEDDINGS_VERSION
+    });
+    const vectorStore = await WeaviateStore.fromExistingIndex(embeddings, {
+      client: client,
+      indexName: process.env.WEAVIATE_INDEX_NAME || "",
+    });
 
+  //   const vectorStore = await Milvus.fromExistingCollection(
+  //     new OpenAIEmbeddings({}),
+  //     {
+  //       collectionName: process.env.MILVUS_INDEX_NAME || '',
+  //       url: process.env.MILVUS_URL,
+  //     },
+  // );
     //create chain
     const chain = makeChain(vectorStore, mode);
     //Ask a question using chat history

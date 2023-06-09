@@ -1,15 +1,20 @@
 import {OpenAI} from 'langchain/llms/openai';
 import {PineconeStore} from 'langchain/vectorstores/pinecone';
 import {ConversationalRetrievalQAChain} from 'langchain/chains';
+import { VectorStore } from 'langchain/dist/vectorstores/base';
 
-export const makeChain = (vectorstore: PineconeStore, mode: string) => {
+export const makeChain = (vectorstore: VectorStore, mode: string) => {
 
     const prompts = getInitalPrmoptByMode(mode);
     const model = new OpenAI({
         temperature: 0, // increase temepreature to get more creative answers
         modelName: 'gpt-3.5-turbo', //change this to gpt-4 if you have access
+        azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
+        azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
+        azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME,
+        azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION,
     });
-
+    
     let enableSourceDocuments = false;
 
     if(mode === 'pair_programmer') {

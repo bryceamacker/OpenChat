@@ -49,3 +49,8 @@ down:
 exec-backend-server:
 	$(DOCKER_COMPOSE) exec backend-server bash
 .PHONY: install down
+
+llm:
+	cp common.env llm-server/.env 2>/dev/null || true
+	$(DOCKER_COMPOSE) build llm-server
+	$(DOCKER_COMPOSE) up -d llm-server

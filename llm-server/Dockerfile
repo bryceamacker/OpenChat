@@ -7,10 +7,10 @@ WORKDIR /usr/src/app
 # Copy package.json and yarn.lock
 COPY package*.json yarn.lock ./
 
-COPY .env .env
-
 # Install dependencies
 RUN yarn install
+
+COPY .env .env
 
 # Copy the project files to the container
 COPY . .

@@ -6,6 +6,12 @@ import {RecursiveCharacterTextSplitter} from 'langchain/text_splitter';
 import {OpenAIEmbeddings} from 'langchain/embeddings/openai';
 import {PineconeStore} from 'langchain/vectorstores/pinecone';
 import {pinecone} from '@/utils/pinecone-client';
+import {VectorStoreFactory} from 'utils/vectorstores';
+import { Milvus } from 'langchain/vectorstores/milvus';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import weaviate from "weaviate-ts-client";
+import { WeaviateStore } from "langchain/vectorstores/weaviate";
+
 
 export default async function pdfHandler(req: NextApiRequest, res: NextApiResponse) {
     try {
@@ -24,20 +30,41 @@ export default async function pdfHandler(req: NextApiRequest, res: NextApiRespon
 
         const docs = await textSplitter.splitDocuments(rawDocs);
 
-        const embeddings = new OpenAIEmbeddings();
-        const index = pinecone.Index(PINECONE_INDEX_NAME);
+        // const embeddings = new OpenAIEmbeddings();
+        const embeddings = new OpenAIEmbeddings({
+            azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE_NAME,
+            azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME,
+          });
+        const client = (weaviate as any).client({
+            scheme: process.env.WEAVIATE_SCHEME || "https",
+            host: process.env.WEAVIATE_HOST || "localhost",
+            // apiKey: new (weaviate as any).ApiKey(
+            //   process.env.WEAVIATE_API_KEY || "default"
+            // ),
+          });
 
-        await PineconeStore.fromDocuments(docs, embeddings, {
-            pineconeIndex: index,
-            namespace: namespace,
-            textKey: 'text',
-        });
+          await WeaviateStore.fromDocuments(docs, embeddings, {
+            client: client,
+            indexName: process.env.WEAVIATE_INDEX_NAME || "",
+          });
+        // const index = pinecone.Index(PINECONE_INDEX_NAME);
 
-        console.log('All is done, folder deleted');
-        return res.status(200).json({message: 'Success'});
-    } catch (e) {
-        console.error(e);
-        // @ts-ignore
-        res.status(500).json({error: e.message, line: e.lineNumber});
-    }
-}
+
+        // await PineconeStore.fromDocuments(docs, embeddings, {
+        //     pineconeIndex: index,
+        //     namespace: namespace,
+        //     textKey: 'text',
+        // });
+        // await Milvus.fromDocuments(docs, embeddings, {
+        //     collectionName: process.env.MILVUS_INDEX_NAME,
+        //     url: process.env.MILVUS_URL,
+        //   });
+
+                console.log('All is done, folder deleted');
+                return res.status(200).json({message: 'Success'});
+            } catch (e) {
+                console.error(e);
+                // @ts-ignore
+                res.status(500).json({error: e.message, line: e.lineNumber});
+            }
+        }
